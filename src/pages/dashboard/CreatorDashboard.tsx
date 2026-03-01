@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Cookies from "js-cookie";
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const { publicKey } = useWallet();
 
   useEffect(() => {
     const userData = Cookies.get("user");
@@ -28,7 +31,12 @@ export default function CreatorDashboard() {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          <div className="flex items-center gap-4">
+            <WalletMultiButton style={{ backgroundColor: 'transparent', border: '1px solid #9945FF', color: '#9945FF', fontSize: '14px', height: '36px', padding: '0 16px', borderRadius: '6px' }}>
+              {publicKey ? undefined : 'Connect Wallet'}
+            </WalletMultiButton>
+            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+          </div>
         </div>
         
         <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">

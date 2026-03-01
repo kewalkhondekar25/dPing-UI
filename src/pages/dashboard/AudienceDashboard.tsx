@@ -8,6 +8,8 @@ import { MessageCircle, Search, Star, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Cookies from "js-cookie";
 import { api } from "@/services/api";
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 interface Creator {
   id: string;
@@ -24,6 +26,7 @@ export default function AudienceDashboard() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const { publicKey } = useWallet();
 
   useEffect(() => {
     const userData = Cookies.get("user");
@@ -78,6 +81,9 @@ export default function AudienceDashboard() {
               <span className="w-2 h-2 rounded-full bg-solana-green animate-pulse"></span>
               Logged in as <span className="text-foreground font-medium">@{user.username}</span>
             </div>
+            <WalletMultiButton style={{ backgroundColor: 'transparent', border: '1px solid #9945FF', color: '#9945FF', fontSize: '14px', height: '36px', padding: '0 16px', borderRadius: '6px' }}>
+              {publicKey ? undefined : 'Connect Wallet'}
+            </WalletMultiButton>
             <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
               Logout
             </Button>
@@ -139,8 +145,8 @@ export default function AudienceDashboard() {
             <h2 className="text-2xl font-semibold tracking-tight">Discover Creators</h2>
             <div className="relative w-full sm:w-72">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search creators..." 
+              <Input
+                placeholder="Search creators..."
                 className="pl-9 bg-white/5 border-white/10 focus-visible:ring-solana-purple"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
