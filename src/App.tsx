@@ -3,32 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Header } from "./components/landing/Header";
-import { Hero } from "./components/landing/Hero";
-import { Problem } from "./components/landing/Problem";
-import { Solution } from "./components/landing/Solution";
-import { HowItWorks } from "./components/landing/HowItWorks";
-import { Features } from "./components/landing/Features";
-import { SplitSection } from "./components/landing/SplitSection";
-import { FAQ } from "./components/landing/FAQ";
-import { CTA } from "./components/landing/CTA";
-import { Footer } from "./components/landing/Footer";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
+import Login from "./pages/auth/Login";
+import Register from "./pages/auth/Register";
+import CreatorDashboard from "./pages/dashboard/CreatorDashboard";
+import AudienceDashboard from "./pages/dashboard/AudienceDashboard";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-solana-purple/30">
-      <Header />
-      <main>
-        <Hero />
-        <Problem />
-        <Solution />
-        <HowItWorks />
-        <Features />
-        <SplitSection />
-        <FAQ />
-        <CTA />
-      </main>
-      <Footer />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard/creator" element={<CreatorDashboard />} />
+        <Route path="/dashboard/audience" element={<AudienceDashboard />} />
+      </Routes>
+    </Router>
   );
 }

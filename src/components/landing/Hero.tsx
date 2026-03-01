@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageSquare, ShieldCheck, Zap } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Hero() {
   return (
@@ -53,13 +54,17 @@ export function Hero() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4"
         >
-          <Button size="lg" className="w-full sm:w-auto rounded-full h-12 px-8 bg-white text-black hover:bg-white/90 font-semibold text-base">
-            Start Connecting
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
-          <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full h-12 px-8 border-white/10 hover:bg-white/5 font-semibold text-base">
-            For Creators
-          </Button>
+          <Link to="/register">
+            <Button size="lg" className="w-full sm:w-auto rounded-full h-12 px-8 bg-white text-black hover:bg-white/90 font-semibold text-base">
+              Start Connecting
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+          </Link>
+          <Link to="/register">
+            <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full h-12 px-8 border-white/10 hover:bg-white/5 font-semibold text-base">
+              For Creators
+            </Button>
+          </Link>
         </motion.div>
 
         {/* Stats/Features Preview */}
