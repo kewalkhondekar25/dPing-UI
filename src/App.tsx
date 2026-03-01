@@ -9,6 +9,8 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import CreatorDashboard from "./pages/dashboard/CreatorDashboard";
 import AudienceDashboard from "./pages/dashboard/AudienceDashboard";
+import AudienceChat from "./pages/chat/AudienceChat";
+import CreatorChat from "./pages/chat/CreatorChat";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Solana Wallet Adapter Imports
@@ -56,10 +58,26 @@ export default function App() {
                 } 
               />
               <Route 
+                path="/chat/creator" 
+                element={
+                  <ProtectedRoute allowedRole="creator">
+                    <CreatorChat />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/dashboard/audience" 
                 element={
                   <ProtectedRoute allowedRole="audience">
                     <AudienceDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/chat/audience" 
+                element={
+                  <ProtectedRoute allowedRole="audience">
+                    <AudienceChat />
                   </ProtectedRoute>
                 } 
               />

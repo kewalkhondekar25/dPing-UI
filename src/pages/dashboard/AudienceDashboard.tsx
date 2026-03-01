@@ -37,6 +37,8 @@ export default function AudienceDashboard() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeChatIds, setActiveChatIds] = useState<Set<string>>(new Set());
+  const [activeChatsCount, setActiveChatsCount] = useState(0);
   const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   
@@ -49,8 +51,29 @@ export default function AudienceDashboard() {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+    fetchActiveChats();
     fetchCreators();
   }, []);
+
+  const fetchActiveChats = async () => {
+    try {
+      // 1. Get the exact count of unique connections
+      const countRes = await api.get("/dashboard/connections/count");
+      if (countRes.data.success) {
+        setActiveChatsCount(countRes.data.data.count);
+      }
+
+      // 2. Get the list of connected users to filter out creators we've already paid
+      const convRes = await api.get("/dashboard/connections");
+      if (convRes.data.success && Array.isArray(convRes.data.data)) {
+        // The endpoint returns a flat array of user objects
+        const ids = convRes.data.data.map((user: any) => user.id);
+        setActiveChatIds(new Set(ids));
+      }
+    } catch (error) {
+      console.error("Failed to fetch active chats:", error);
+    }
+  };
 
   const fetchCreators = async () => {
     try {
@@ -75,8 +98,9 @@ export default function AudienceDashboard() {
 
   const filteredCreators = creators.filter(
     (c) =>
-      c.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.username.toLowerCase().includes(searchQuery.toLowerCase())
+      (!activeChatIds.has(c.id)) && // Filter out already paid creators
+      (c.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleConnectClick = (creator: Creator) => {
@@ -149,6 +173,10 @@ export default function AudienceDashboard() {
           description: `You can now message ${selectedCreator.display_name}.`
         });
         setIsPaymentModalOpen(false);
+        // Add to active chats and navigate to chat page immediately
+        setActiveChatIds(prev => new Set(prev).add(selectedCreator.id));
+        setActiveChatsCount(prev => prev + 1);
+        setTimeout(() => navigate('/chat/audience'), 1500);
       } else {
         throw new Error("Failed to record payment on the server.");
       }
@@ -214,14 +242,17 @@ export default function AudienceDashboard() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white/5 border-white/10">
+          <Card 
+            className="bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 transition-colors"
+            onClick={() => navigate('/chat/audience')}
+          >
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 rounded-full bg-solana-blue/20 flex items-center justify-center text-solana-blue">
                 <MessageCircle className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Chats</p>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">{activeChatsCount}</p>
               </div>
             </CardContent>
           </Card>

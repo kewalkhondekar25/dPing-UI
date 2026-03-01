@@ -16,6 +16,9 @@ export default function CreatorDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateWalletAddress, setUpdateWalletAddress] = useState(false);
+  const [totalEarningsLamports, setTotalEarningsLamports] = useState<string | null>(null);
+  const [activeConnectionsCount, setActiveConnectionsCount] = useState<number>(0);
+  const [earningsLoading, setEarningsLoading] = useState(true);
   const [formData, setFormData] = useState({
     username: '',
     display_name: '',
@@ -38,6 +41,32 @@ export default function CreatorDashboard() {
       });
     }
   }, []);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setEarningsLoading(true);
+        // Fetch earnings
+        const res = await api.get('/payments/earnings');
+        if (res.data?.success && res.data?.data != null) {
+          const data = res.data.data;
+          const lamports = data?.total_earnings_lamports / 1_000_000_000;
+          if (lamports != null) setTotalEarningsLamports(String(lamports));
+        }
+
+        // Fetch active connections count
+        const countRes = await api.get('/dashboard/connections/count');
+        if (countRes.data?.success) {
+          setActiveConnectionsCount(countRes.data.data.count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+      } finally {
+        setEarningsLoading(false);
+      }
+    };
+    if (user) fetchDashboardData();
+  }, [user]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,11 +278,13 @@ export default function CreatorDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
             <h3 className="text-lg font-medium text-muted-foreground mb-2">Total Earnings</h3>
-            <p className="text-3xl font-bold text-solana-green">0 SOL</p>
+            <p className="text-3xl font-bold text-solana-green">
+              {earningsLoading ? '…' : totalEarningsLamports ? totalEarningsLamports : '0.00'} SOL
+            </p>
           </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Pending Messages</h3>
-            <p className="text-3xl font-bold text-solana-purple">0</p>
+          <div className="bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center" onClick={() => navigate('/chat/creator')}>
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">Active Connections</h3>
+            <p className="text-3xl font-bold text-solana-purple">{activeConnectionsCount}</p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
             <h3 className="text-lg font-medium text-muted-foreground mb-2">Profile Views</h3>
