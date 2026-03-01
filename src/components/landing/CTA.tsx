@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function CTA() {
   return (
@@ -27,10 +28,12 @@ export function CTA() {
             Join the decentralized creator economy on Solana. Stop giving away your time for free and start connecting meaningfully.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="w-full sm:w-auto rounded-full h-14 px-10 bg-white text-black hover:bg-white/90 font-semibold text-lg shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] transition-all duration-300">
-              Launch App
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
+            <Link to="/register">
+              <Button size="lg" className="w-full sm:w-auto rounded-full h-14 px-10 bg-white text-black hover:bg-white/90 font-semibold text-lg shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:shadow-[0_0_40px_rgba(255,255,255,0.5)] transition-all duration-300">
+                Launch App
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </div>

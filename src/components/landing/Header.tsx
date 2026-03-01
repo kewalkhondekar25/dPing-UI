@@ -1,17 +1,18 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/60 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-solana-purple to-solana-green flex items-center justify-center">
             <span className="text-white font-bold text-lg leading-none">d</span>
           </div>
           <span className="text-xl font-bold tracking-tight">dPing</span>
-        </div>
+        </Link>
         
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
           <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -22,10 +23,15 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <Button className="bg-white text-black hover:bg-white/90 rounded-full font-semibold px-6">
-            <Wallet className="w-4 h-4 mr-2" />
-            Connect Wallet
-          </Button>
+          <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+            Sign In
+          </Link>
+          <Link to="/register">
+            <Button className="bg-white text-black hover:bg-white/90 rounded-full font-semibold px-6">
+              <Wallet className="w-4 h-4 mr-2" />
+              Connect Wallet
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
