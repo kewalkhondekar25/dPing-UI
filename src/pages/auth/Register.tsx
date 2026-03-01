@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { api } from "@/services/api";
+import Cookies from "js-cookie";
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [role, setRole] = useState<"creator" | "audience">("audience");
   const [formData, setFormData] = useState({
     email: "",
@@ -19,6 +21,19 @@ export default function Register() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    const userStr = Cookies.get("user");
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        navigate(`/dashboard/${user.role}`, { replace: true });
+      } catch (e) {
+        // Ignore parsing error
+      }
+    }
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -37,9 +52,11 @@ export default function Register() {
 
       if (response.data.success) {
         const { user, tokens } = response.data.data;
-        localStorage.setItem("access_token", tokens.access_token);
-        localStorage.setItem("refresh_token", tokens.refresh_token);
-        localStorage.setItem("user", JSON.stringify(user));
+        
+        // Set cookies with 7 days expiry for refresh token, 1 day for access token
+        Cookies.set("access_token", tokens.access_token, { expires: 1, secure: true, sameSite: 'none', path: '/' });
+        Cookies.set("refresh_token", tokens.refresh_token, { expires: 7, secure: true, sameSite: 'none', path: '/' });
+        Cookies.set("user", JSON.stringify(user), { expires: 7, secure: true, sameSite: 'none', path: '/' });
 
         if (user.role === "creator") {
           navigate("/dashboard/creator");

@@ -1,29 +1,23 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import Cookies from "js-cookie";
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (!userData) {
-      navigate("/login");
-      return;
+    const userData = Cookies.get("user");
+    if (userData) {
+      setUser(JSON.parse(userData));
     }
-    const parsedUser = JSON.parse(userData);
-    if (parsedUser.role !== "creator") {
-      navigate("/dashboard/audience");
-      return;
-    }
-    setUser(parsedUser);
-  }, [navigate]);
+  }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("user");
+    Cookies.remove("access_token", { path: '/', secure: true, sameSite: 'none' });
+    Cookies.remove("refresh_token", { path: '/', secure: true, sameSite: 'none' });
+    Cookies.remove("user", { path: '/', secure: true, sameSite: 'none' });
     navigate("/");
   };
 
@@ -33,7 +27,7 @@ export default function CreatorDashboard() {
     <div className="min-h-screen bg-background text-foreground p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Creator Dashboard</h1>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
           <Button variant="outline" onClick={handleLogout}>Logout</Button>
         </div>
         
