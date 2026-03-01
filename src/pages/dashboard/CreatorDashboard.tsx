@@ -1,21 +1,85 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Cookies from "js-cookie";
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { api } from "@/services/api";
+import { Wallet, AlertCircle } from "lucide-react";
 
 export default function CreatorDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const { publicKey } = useWallet();
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateWalletAddress, setUpdateWalletAddress] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    display_name: '',
+    bio: '',
+    dm_price_lamports: '',
+    profile_image_url: ''
+  });
+
   useEffect(() => {
     const userData = Cookies.get("user");
     if (userData) {
-      setUser(JSON.parse(userData));
+      const parsed = JSON.parse(userData);
+      setUser(parsed);
+      setFormData({
+        username: parsed.username || '',
+        display_name: parsed.display_name || '',
+        bio: parsed.bio || '',
+        dm_price_lamports: parsed.dm_price_lamports ? (parseInt(parsed.dm_price_lamports, 10) / 1_000_000_000).toString() : '',
+        profile_image_url: parsed.profile_image_url || ''
+      });
     }
   }, []);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setIsUpdating(true);
+      
+      const dmPriceSOL = parseFloat(formData.dm_price_lamports); // Here it acts as SOL value in UI input
+      let submitData = { ...formData };
+      
+      if (!isNaN(dmPriceSOL)) {
+        // Convert the SOL input to lamports string to match the updated backend expectation
+        const lamports = Math.floor(dmPriceSOL * 1_000_000_000).toString();
+        submitData = { ...formData, dm_price_lamports: lamports } as any;
+      }
+      
+      const res = await api.patch('/users/creator/profile', submitData);
+      
+      let walletUpdated = false;
+      let newWalletAddress = user.wallet_address;
+      
+      if (updateWalletAddress && publicKey) {
+        const walletRes = await api.patch('/users/wallet', { wallet_address: publicKey.toString() });
+        if (walletRes.data.success) {
+          walletUpdated = true;
+          newWalletAddress = publicKey.toString();
+        }
+      }
+
+      if (res.data.success || walletUpdated) {
+        // Only keep the local display state as the input formatted in SOL so the user can keep editing in SOL later without issue
+        const updatedUser = { ...user, ...formData, wallet_address: newWalletAddress };
+        setUser(updatedUser);
+        Cookies.set("user", JSON.stringify(updatedUser), { path: '/', secure: true, sameSite: 'none' });
+        setIsEditing(false);
+        setUpdateWalletAddress(false);
+      }
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleLogout = () => {
     Cookies.remove("access_token", { path: '/', secure: true, sameSite: 'none' });
@@ -39,22 +103,147 @@ export default function CreatorDashboard() {
           </div>
         </div>
         
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Welcome, {user.display_name}!</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-            <div>
-              <span className="font-medium text-foreground">Username:</span> @{user.username}
-            </div>
-            <div>
-              <span className="font-medium text-foreground">Email:</span> {user.email}
-            </div>
-            <div>
-              <span className="font-medium text-foreground">DM Price:</span> ${user.dm_price_usd}
-            </div>
-            <div>
-              <span className="font-medium text-foreground">Status:</span> {user.is_active ? "Active" : "Inactive"}
-            </div>
-          </div>
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 relative">
+          {!isEditing ? (
+            <>
+              <div className="absolute top-6 right-6">
+                <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                  Edit Profile
+                </Button>
+              </div>
+              <h2 className="text-xl font-semibold mb-4">Welcome, {user.display_name}!</h2>
+              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div>
+                  <span className="font-medium text-foreground">Username:</span> @{user.username}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">Email:</span> {user.email}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">DM Price:</span> {user.dm_price_lamports ? (parseInt(user.dm_price_lamports, 10) / 1_000_000_000).toFixed(2) : "0.00"} SOL
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">Status:</span> {user.is_active ? "Active" : "Inactive"}
+                </div>
+                {user.bio && (
+                  <div className="col-span-2 mt-2">
+                    <span className="font-medium text-foreground">Bio:</span> {user.bio}
+                  </div>
+                )}
+                {user.wallet_address && (
+                  <div className="col-span-2 mt-2">
+                    <span className="font-medium text-foreground">Receiving Wallet:</span> <span className="font-mono text-xs">{user.wallet_address}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Edit Profile</h2>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Display Name</label>
+                  <Input 
+                    value={formData.display_name} 
+                    onChange={e => setFormData({...formData, display_name: e.target.value})} 
+                    placeholder="Display Name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Username</label>
+                  <Input 
+                    value={formData.username} 
+                    onChange={e => setFormData({...formData, username: e.target.value})} 
+                    placeholder="Username"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">DM Price (SOL)</label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.dm_price_lamports} 
+                    onChange={e => setFormData({...formData, dm_price_lamports: e.target.value})} 
+                    placeholder="e.g. 0.05"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Profile Image URL</label>
+                  <Input 
+                    value={formData.profile_image_url} 
+                    onChange={e => setFormData({...formData, profile_image_url: e.target.value})} 
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="col-span-1 md:col-span-2 space-y-2">
+                  <label className="text-sm font-medium">Bio</label>
+                  <textarea 
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.bio} 
+                    onChange={e => setFormData({...formData, bio: e.target.value})} 
+                    placeholder="Tell your audience about yourself..."
+                  />
+                </div>
+                
+                <div className="col-span-1 md:col-span-2 mt-4 p-5 border border-solana-purple/20 rounded-xl bg-gradient-to-r from-solana-purple/5 to-transparent">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 p-2 rounded-full bg-solana-purple/10 text-solana-purple">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground mb-1">Receiving Wallet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This is the Solana address where you will receive all DM payments and tips from your audience. Please ensure this is correct.
+                      </p>
+
+                      {publicKey ? (
+                        <div className="space-y-3 bg-background/50 p-4 rounded-lg border border-white/5">
+                          <div className="flex items-center gap-3">
+                            <input 
+                              type="checkbox" 
+                              id="updateWallet" 
+                              className="w-4 h-4 rounded border-white/20 bg-background text-solana-purple focus:ring-solana-purple focus:ring-offset-background disabled:opacity-50"
+                              checked={updateWalletAddress}
+                              onChange={(e) => setUpdateWalletAddress(e.target.checked)}
+                              disabled={user?.wallet_address === publicKey.toString()}
+                            />
+                            <label htmlFor="updateWallet" className={`text-sm font-medium ${user?.wallet_address === publicKey.toString() ? 'opacity-70' : 'cursor-pointer'}`}>
+                              {user?.wallet_address === publicKey.toString() 
+                                ? "Your connected wallet is already set as your receiving address."
+                                : "Set my currently connected wallet as my receiving address."
+                              }
+                            </label>
+                          </div>
+                          {!user?.wallet_address || user.wallet_address !== publicKey.toString() ? (
+                            <div className="pl-7">
+                              <code className="text-xs px-2 py-1 rounded bg-solana-purple/10 text-solana-purple border border-solana-purple/20">
+                                {publicKey.toString()}
+                              </code>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-amber-500/90 bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>Connect your wallet using the button at the top right to set or update your receiving address.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="pt-4 flex justify-end gap-2">
+                <Button type="button" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

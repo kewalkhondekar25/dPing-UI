@@ -4,12 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Search, Star, TrendingUp } from "lucide-react";
+import { MessageCircle, Search, Star, TrendingUp, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Cookies from "js-cookie";
 import { api } from "@/services/api";
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface Creator {
   id: string;
@@ -17,7 +27,8 @@ interface Creator {
   display_name: string;
   bio: string | null;
   profile_image_url: string | null;
-  dm_price_usd: string;
+  dm_price_lamports: string;
+  wallet_address: string | null;
 }
 
 export default function AudienceDashboard() {
@@ -26,7 +37,12 @@ export default function AudienceDashboard() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const { publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
+  const { connection } = useConnection();
+  
+  const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   useEffect(() => {
     const userData = Cookies.get("user");
@@ -62,6 +78,89 @@ export default function AudienceDashboard() {
       c.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleConnectClick = (creator: Creator) => {
+    if (!publicKey) {
+      toast.error("Please connect your wallet first", {
+        description: "You need a Solana wallet to connect with creators."
+      });
+      return;
+    }
+    
+    if (!creator.wallet_address) {
+      toast.error("Creator unavailable", {
+        description: "This creator hasn't set up their receiving wallet yet."
+      });
+      return;
+    }
+    
+    setSelectedCreator(creator);
+    setIsPaymentModalOpen(true);
+  };
+  
+  const handlePayment = async () => {
+    if (!publicKey || !selectedCreator || !selectedCreator.wallet_address) return;
+    
+    try {
+      setIsProcessingPayment(true);
+      
+      const amountLamportsStr = selectedCreator.dm_price_lamports || "0";
+      const amountLamports = parseInt(amountLamportsStr, 10);
+      
+      if (isNaN(amountLamports) || amountLamports <= 0) {
+        throw new Error("Invalid payment amount.");
+      }
+      
+      const fromPubkeyObj = new PublicKey(publicKey.toString());
+      const toPubkeyObj = new PublicKey(selectedCreator.wallet_address);
+      
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: fromPubkeyObj,
+          toPubkey: toPubkeyObj,
+          lamports: BigInt(amountLamportsStr) as any, // Need to cast as any because type defs in older web3.js versions clash with strict TS
+        })
+      );
+      
+      const {
+        context: { slot: minContextSlot },
+        value: { blockhash, lastValidBlockHeight }
+      } = await connection.getLatestBlockhashAndContext();
+      
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = fromPubkeyObj;
+      
+      const signature = await sendTransaction(transaction, connection, { minContextSlot });
+      
+      const confirmation = await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
+      
+      if (confirmation.value.err) {
+        throw new Error(`Transaction failed: ${confirmation.value.err.toString()}`);
+      }
+      
+      const res = await api.post('/payments/record', {
+        creator_id: selectedCreator.id,
+        amount_lamports: amountLamports.toString(),
+        transaction_id: signature
+      });
+      
+      if (res.data?.success || res.status === 200 || res.status === 201) {
+        toast.success("Payment successful!", {
+          description: `You can now message ${selectedCreator.display_name}.`
+        });
+        setIsPaymentModalOpen(false);
+      } else {
+        throw new Error("Failed to record payment on the server.");
+      }
+    } catch (error: any) {
+      console.error("Payment failed:", error);
+      toast.error("Payment failed", {
+        description: error?.message || "There was an issue processing your transaction."
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
 
   if (!user) return null;
 
@@ -133,7 +232,7 @@ export default function AudienceDashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-bold">$0.00</p>
+                <p className="text-2xl font-bold">0.00 SOL</p>
               </div>
             </CardContent>
           </Card>
@@ -204,14 +303,17 @@ export default function AudienceDashboard() {
                     </p>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="bg-white/5 hover:bg-white/10 text-xs font-normal">
-                        DM: ${creator.dm_price_usd}
+                        DM: {creator.dm_price_lamports ? (parseInt(creator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL
                       </Badge>
                     </div>
                   </CardContent>
                   <CardFooter className="pt-4 border-t border-white/5">
-                    <Button className="w-full bg-white text-black hover:bg-white/90 font-medium">
+                    <Button 
+                      className="w-full bg-white text-black hover:bg-white/90 font-medium"
+                      onClick={() => handleConnectClick(creator)}
+                    >
                       <MessageCircle className="w-4 h-4 mr-2" />
-                      Message
+                      Pay {creator?.dm_price_lamports ? (parseInt(creator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL to connect
                     </Button>
                   </CardFooter>
                 </Card>
@@ -230,6 +332,52 @@ export default function AudienceDashboard() {
           )}
         </div>
       </main>
+
+      {/* Payment Modal */}
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-background border-white/10 text-foreground">
+          <DialogHeader>
+            <DialogTitle>Connect with {selectedCreator?.display_name}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              You are about to pay {selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL to send a direct message to this creator. 
+              This payment will be processed securely on the Solana network.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-solana-purple/20 flex items-center justify-center text-solana-purple">
+              <MessageCircle className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+              <p className="text-3xl font-bold text-solana-purple">{selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsPaymentModalOpen(false)}
+              disabled={isProcessingPayment}
+              className="border-white/10 hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handlePayment}
+              disabled={isProcessingPayment}
+              className="bg-solana-purple hover:bg-solana-purple/90 text-white"
+            >
+              {isProcessingPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Pay ${selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL`
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

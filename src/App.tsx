@@ -18,6 +18,7 @@ import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
   // Set up the network to devnet, testnet, or mainnet-beta.
@@ -64,6 +65,7 @@ export default function App() {
               />
             </Routes>
           </Router>
+          <Toaster />
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
