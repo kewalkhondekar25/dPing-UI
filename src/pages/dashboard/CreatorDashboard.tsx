@@ -19,6 +19,8 @@ export default function CreatorDashboard() {
   const [totalEarningsLamports, setTotalEarningsLamports] = useState<string | null>(null);
   const [activeConnectionsCount, setActiveConnectionsCount] = useState<number>(0);
   const [earningsLoading, setEarningsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     display_name: '',
@@ -46,6 +48,7 @@ export default function CreatorDashboard() {
     const fetchDashboardData = async () => {
       try {
         setEarningsLoading(true);
+        setTransactionsLoading(true);
         // Fetch earnings
         const res = await api.get('/payments/earnings');
         if (res.data?.success && res.data?.data != null) {
@@ -59,10 +62,17 @@ export default function CreatorDashboard() {
         if (countRes.data?.success) {
           setActiveConnectionsCount(countRes.data.data.count);
         }
+
+        // Fetch incoming payments / transactions
+        const txRes = await api.get('/payments/incoming');
+        if (txRes.data?.success && Array.isArray(txRes.data.data)) {
+          setTransactions(txRes.data.data);
+        }
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
       } finally {
         setEarningsLoading(false);
+        setTransactionsLoading(false);
       }
     };
     if (user) fetchDashboardData();
@@ -120,19 +130,39 @@ export default function CreatorDashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div />
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mr-2">
+              <span className="w-2 h-2 rounded-full bg-solana-green animate-pulse"></span>
+              Logged in as <span className="text-foreground font-medium">@{user.username}</span>
+            </div>
             <WalletMultiButton style={{ backgroundColor: 'transparent', border: '1px solid #9945FF', color: '#9945FF', fontSize: '14px', height: '36px', padding: '0 16px', borderRadius: '6px' }}>
               {publicKey ? undefined : 'Connect Wallet'}
             </WalletMultiButton>
-            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground hover:text-foreground">
+              Logout
+            </Button>
           </div>
         </div>
-        
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 relative">
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold tracking-tight mb-2">
+            Welcome back, {user.display_name}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Discover and connect with your favorite creators on Solana.
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6 mb-8 relative">
           {!isEditing ? (
             <>
               <div className="absolute top-6 right-6">
@@ -273,25 +303,90 @@ export default function CreatorDashboard() {
               </div>
             </form>
           )}
-        </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">Total Earnings</h3>
+              <p className="text-3xl font-bold text-solana-green">
+                {earningsLoading ? '…' : totalEarningsLamports ? totalEarningsLamports : '0.00'} SOL
+              </p>
+            </div>
+            <div className="bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center" onClick={() => navigate('/chat/creator')}>
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">Active Connections</h3>
+              <p className="text-3xl font-bold text-solana-purple">{activeConnectionsCount}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+              <h3 className="text-lg font-medium text-muted-foreground mb-2">Profile Views</h3>
+              <p className="text-3xl font-bold text-solana-blue">0</p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Total Earnings</h3>
-            <p className="text-3xl font-bold text-solana-green">
-              {earningsLoading ? '…' : totalEarningsLamports ? totalEarningsLamports : '0.00'} SOL
-            </p>
-          </div>
-          <div className="bg-white/5 border-white/10 cursor-pointer hover:bg-white/10 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center" onClick={() => navigate('/chat/creator')}>
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Active Connections</h3>
-            <p className="text-3xl font-bold text-solana-purple">{activeConnectionsCount}</p>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-            <h3 className="text-lg font-medium text-muted-foreground mb-2">Profile Views</h3>
-            <p className="text-3xl font-bold text-solana-blue">0</p>
+          <div className="mt-10 bg-white/5 border border-white/10 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">Transactions</h2>
+            </div>
+            {transactionsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading transactions…</p>
+            ) : transactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No transactions found yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <th className="py-2 pr-4">Date</th>
+                      <th className="py-2 pr-4">Audience</th>
+                      <th className="py-2 pr-4">Amount (SOL)</th>
+                      <th className="py-2 pr-4">Transaction</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => {
+                      const amountSol = tx?.amount_lamports
+                        ? Number(tx.amount_lamports) / 1_000_000_000
+                        : 0;
+                      const audienceName =
+                        tx?.audience?.display_name ||
+                        tx?.audience?.username ||
+                        'Unknown';
+                      const date = tx?.paid_at
+                        ? new Date(tx.paid_at).toLocaleDateString()
+                        : '-';
+                      const explorerUrl = tx?.transaction_id
+                        ? `https://explorer.solana.com/tx/${tx.transaction_id}?cluster=devnet`
+                        : undefined;
+
+                      return (
+                        <tr key={tx.id} className="border-b border-white/5 last:border-0">
+                          <td className="py-2 pr-4 whitespace-nowrap">{date}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">{audienceName}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">
+                            {amountSol}
+                          </td>
+                          <td className="py-2 pr-4 whitespace-nowrap">
+                            {explorerUrl ? (
+                              <a
+                                href={explorerUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-solana-blue hover:underline break-all"
+                              >
+                                {tx.transaction_id}
+                              </a>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
