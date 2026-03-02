@@ -39,6 +39,9 @@ export default function AudienceDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeChatIds, setActiveChatIds] = useState<Set<string>>(new Set());
   const [activeChatsCount, setActiveChatsCount] = useState(0);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [totalSpentSol, setTotalSpentSol] = useState(0);
   const { publicKey, sendTransaction } = useWallet();
   const { connection } = useConnection();
   
@@ -53,6 +56,7 @@ export default function AudienceDashboard() {
     }
     fetchActiveChats();
     fetchCreators();
+    fetchPayments();
   }, []);
 
   const fetchActiveChats = async () => {
@@ -86,6 +90,29 @@ export default function AudienceDashboard() {
       console.error("Failed to fetch creators:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPayments = async () => {
+    try {
+      setPaymentsLoading(true);
+      const res = await api.get("/payments/my-payments");
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const list = res.data.data;
+        setPayments(list);
+        const totalLamports = list.reduce(
+          (acc: bigint, item: any) =>
+            acc + BigInt(item.amount_lamports || "0"),
+          BigInt(0)
+        );
+        setTotalSpentSol(
+          Number(totalLamports) / LAMPORTS_PER_SOL
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch payments:", error);
+    } finally {
+      setPaymentsLoading(false);
     }
   };
 
@@ -197,12 +224,7 @@ export default function AudienceDashboard() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-solana-purple to-solana-green flex items-center justify-center">
-              <span className="font-bold text-white text-sm">S</span>
-            </div>
-            <span className="font-semibold text-lg tracking-tight">SolanaConnect</span>
-          </div>
+          <div />
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground mr-4">
               <span className="w-2 h-2 rounded-full bg-solana-green animate-pulse"></span>
@@ -263,10 +285,79 @@ export default function AudienceDashboard() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                <p className="text-2xl font-bold">0.00 SOL</p>
+                <p className="text-2xl font-bold">
+                  {totalSpentSol.toFixed(2)} SOL
+                </p>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Transactions Section */}
+        <div className="mb-12 bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Transactions</h2>
+          </div>
+          {paymentsLoading ? (
+            <p className="text-sm text-muted-foreground">Loading transactions…</p>
+          ) : payments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No transactions found yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                    <th className="py-2 pr-4">Date</th>
+                    <th className="py-2 pr-4">Creator</th>
+                    <th className="py-2 pr-4">Amount (SOL)</th>
+                    <th className="py-2 pr-4">Transaction</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payments.map((tx: any) => {
+                    const amountSol = tx?.amount_lamports
+                      ? Number(tx.amount_lamports) / LAMPORTS_PER_SOL
+                      : 0;
+                    const creatorName =
+                      tx?.creator?.display_name ||
+                      tx?.creator?.username ||
+                      tx?.creator_id ||
+                      "Unknown";
+                    const date = tx?.paid_at
+                      ? new Date(tx.paid_at).toLocaleDateString()
+                      : "-";
+                    const explorerUrl = tx?.transaction_id
+                      ? `https://explorer.solana.com/tx/${tx.transaction_id}?cluster=devnet`
+                      : undefined;
+
+                    return (
+                      <tr key={tx.id} className="border-b border-white/5 last:border-0">
+                        <td className="py-2 pr-4 whitespace-nowrap">{date}</td>
+                        <td className="py-2 pr-4 whitespace-nowrap">{creatorName}</td>
+                        <td className="py-2 pr-4 whitespace-nowrap">
+                          {amountSol}
+                        </td>
+                        <td className="py-2 pr-4 whitespace-nowrap">
+                          {explorerUrl ? (
+                            <a
+                              href={explorerUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-solana-blue hover:underline break-all"
+                            >
+                              {tx.transaction_id}
+                            </a>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Discover Section */}
