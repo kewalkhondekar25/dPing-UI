@@ -8,6 +8,19 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { api } from "@/services/api";
 import { Wallet, AlertCircle } from "lucide-react";
 
+const LAMPORTS_PER_SOL = 1_000_000_000;
+
+const lamportsToSolDisplay = (lamports: string | number | null | undefined): string => {
+  if (lamports == null || lamports === "") return "0";
+  const numericLamports = Number(lamports);
+  if (!Number.isFinite(numericLamports)) return "0";
+  const solValue = numericLamports / LAMPORTS_PER_SOL;
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 9,
+  }).format(solValue);
+};
+
 export default function CreatorDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -38,7 +51,7 @@ export default function CreatorDashboard() {
         username: parsed.username || '',
         display_name: parsed.display_name || '',
         bio: parsed.bio || '',
-        dm_price_lamports: parsed.dm_price_lamports ? (parseInt(parsed.dm_price_lamports, 10) / 1_000_000_000).toString() : '',
+        dm_price_lamports: lamportsToSolDisplay(parsed.dm_price_lamports),
         profile_image_url: parsed.profile_image_url || ''
       });
     }
@@ -88,7 +101,7 @@ export default function CreatorDashboard() {
       
       if (!isNaN(dmPriceSOL)) {
         // Convert the SOL input to lamports string to match the updated backend expectation
-        const lamports = Math.floor(dmPriceSOL * 1_000_000_000).toString();
+        const lamports = Math.round(dmPriceSOL * LAMPORTS_PER_SOL).toString();
         submitData = { ...formData, dm_price_lamports: lamports } as any;
       }
       
@@ -106,8 +119,8 @@ export default function CreatorDashboard() {
       }
 
       if (res.data.success || walletUpdated) {
-        // Only keep the local display state as the input formatted in SOL so the user can keep editing in SOL later without issue
-        const updatedUser = { ...user, ...formData, wallet_address: newWalletAddress };
+        // Keep dm_price_lamports in lamports for consistency with backend contract and display logic.
+        const updatedUser = { ...user, ...formData, dm_price_lamports: submitData.dm_price_lamports, wallet_address: newWalletAddress };
         setUser(updatedUser);
         Cookies.set("user", JSON.stringify(updatedUser), { path: '/', secure: true, sameSite: 'none' });
         setIsEditing(false);
@@ -179,7 +192,7 @@ export default function CreatorDashboard() {
                   <span className="font-medium text-foreground">Email:</span> {user.email}
                 </div>
                 <div>
-                  <span className="font-medium text-foreground">DM Price:</span> {user.dm_price_lamports ? (parseInt(user.dm_price_lamports, 10) / 1_000_000_000).toFixed(2) : "0.00"} SOL
+                  <span className="font-medium text-foreground">DM Price:</span> {lamportsToSolDisplay(user.dm_price_lamports)} SOL
                 </div>
                 <div>
                   <span className="font-medium text-foreground">Status:</span> {user.is_active ? "Active" : "Inactive"}
