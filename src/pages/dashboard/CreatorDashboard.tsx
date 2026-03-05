@@ -88,7 +88,12 @@ export default function CreatorDashboard() {
         setTransactionsLoading(false);
       }
     };
-    if (user) fetchDashboardData();
+
+    if (!user) return;
+    fetchDashboardData();
+
+    const interval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(interval);
   }, [user]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {

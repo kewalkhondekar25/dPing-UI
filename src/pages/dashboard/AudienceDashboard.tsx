@@ -31,6 +31,25 @@ interface Creator {
   wallet_address: string | null;
 }
 
+const lamportsToSolDisplay = (lamports: string | number | null | undefined): string => {
+  if (lamports == null || lamports === "") return "0";
+  const numericLamports = Number(lamports);
+  if (!Number.isFinite(numericLamports)) return "0";
+  const solValue = numericLamports / LAMPORTS_PER_SOL;
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 9,
+  }).format(solValue);
+};
+
+const formatSolDisplay = (sol: number | null | undefined): string => {
+  if (sol == null || !Number.isFinite(sol)) return "0";
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 9,
+  }).format(sol);
+};
+
 export default function AudienceDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -57,6 +76,13 @@ export default function AudienceDashboard() {
     fetchActiveChats();
     fetchCreators();
     fetchPayments();
+
+    const interval = setInterval(() => {
+      fetchActiveChats();
+      fetchPayments();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchActiveChats = async () => {
@@ -286,7 +312,7 @@ export default function AudienceDashboard() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
                 <p className="text-2xl font-bold">
-                  {totalSpentSol.toFixed(2)} SOL
+                  {formatSolDisplay(totalSpentSol)} SOL
                 </p>
               </div>
             </CardContent>
@@ -425,7 +451,7 @@ export default function AudienceDashboard() {
                     </p>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="bg-white/5 hover:bg-white/10 text-xs font-normal">
-                        DM: {creator.dm_price_lamports ? (parseInt(creator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL
+                        DM: {lamportsToSolDisplay(creator.dm_price_lamports)} SOL
                       </Badge>
                     </div>
                   </CardContent>
@@ -435,7 +461,7 @@ export default function AudienceDashboard() {
                       onClick={() => handleConnectClick(creator)}
                     >
                       <MessageCircle className="w-4 h-4 mr-2" />
-                      Pay {creator?.dm_price_lamports ? (parseInt(creator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL to connect
+                      Pay {lamportsToSolDisplay(creator?.dm_price_lamports)} SOL to connect
                     </Button>
                   </CardFooter>
                 </Card>
@@ -461,7 +487,7 @@ export default function AudienceDashboard() {
           <DialogHeader>
             <DialogTitle>Connect with {selectedCreator?.display_name}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              You are about to pay {selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL to send a direct message to this creator. 
+              You are about to pay {lamportsToSolDisplay(selectedCreator?.dm_price_lamports)} SOL to send a direct message to this creator. 
               This payment will be processed securely on the Solana network.
             </DialogDescription>
           </DialogHeader>
@@ -471,7 +497,7 @@ export default function AudienceDashboard() {
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
-              <p className="text-3xl font-bold text-solana-purple">{selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL</p>
+              <p className="text-3xl font-bold text-solana-purple">{lamportsToSolDisplay(selectedCreator?.dm_price_lamports)} SOL</p>
             </div>
           </div>
           <DialogFooter>
@@ -494,7 +520,7 @@ export default function AudienceDashboard() {
                   Processing...
                 </>
               ) : (
-                `Pay ${selectedCreator?.dm_price_lamports ? (parseInt(selectedCreator.dm_price_lamports, 10) / LAMPORTS_PER_SOL).toFixed(2) : "0.00"} SOL`
+                `Pay ${lamportsToSolDisplay(selectedCreator?.dm_price_lamports)} SOL`
               )}
             </Button>
           </DialogFooter>

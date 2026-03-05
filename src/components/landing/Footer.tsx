@@ -6,9 +6,7 @@ export function Footer() {
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-solana-purple to-solana-green flex items-center justify-center">
-              <span className="text-white font-bold text-lg leading-none">d</span>
-            </div>
+            <img src="/favicon.svg" alt="dPing logo" className="w-8 h-8" />
             <span className="text-xl font-bold tracking-tight">dPing</span>
           </div>
 
