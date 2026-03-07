@@ -92,7 +92,7 @@ export default function CreatorDashboard() {
     if (!user) return;
     fetchDashboardData();
 
-    const interval = setInterval(fetchDashboardData, 30000);
+    const interval = setInterval(fetchDashboardData, 15000);
     return () => clearInterval(interval);
   }, [user]);
 

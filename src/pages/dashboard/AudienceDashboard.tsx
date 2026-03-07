@@ -80,7 +80,7 @@ export default function AudienceDashboard() {
     const interval = setInterval(() => {
       fetchActiveChats();
       fetchPayments();
-    }, 30000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);

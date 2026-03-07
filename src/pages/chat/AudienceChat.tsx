@@ -44,6 +44,8 @@ export default function AudienceChat() {
       navigate("/");
     }
     fetchChatUsers();
+    const usersInterval = setInterval(fetchChatUsers, 15000);
+    return () => clearInterval(usersInterval);
   }, [navigate]);
 
   useEffect(() => {
@@ -55,6 +57,9 @@ export default function AudienceChat() {
           setChatUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, unread_count: 0 } : u));
         })
         .catch(err => console.error("Failed to mark messages as read:", err));
+
+      const messagesInterval = setInterval(() => fetchMessages(selectedUser.id), 15000);
+      return () => clearInterval(messagesInterval);
     }
   }, [selectedUser]);
 
