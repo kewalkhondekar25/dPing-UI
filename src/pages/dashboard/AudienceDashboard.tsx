@@ -209,10 +209,12 @@ export default function AudienceDashboard() {
       
       const signature = await sendTransaction(transaction, connection, { minContextSlot });
       
-      const confirmation = await connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err.toString()}`);
+      const confirmationResult = await Promise.race([
+        connection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed'),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 20000))
+      ]);
+      if (confirmationResult !== null && confirmationResult.value.err) {
+        throw new Error(`Transaction failed: ${confirmationResult.value.err.toString()}`);
       }
       
       const res = await api.post('/payments/record', {

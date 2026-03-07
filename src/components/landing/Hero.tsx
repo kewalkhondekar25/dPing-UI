@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageSquare, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, MessageSquare, Play, ShieldCheck, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function Hero() {
@@ -60,11 +60,12 @@ export function Hero() {
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
           </Link>
-          <Link to="/register">
+          <a href="https://res.cloudinary.com/kewalkhondekar/video/upload/v1772878811/dPing/demo_with_voice_bmhyxh.mp4" target="_blank" rel="noopener noreferrer">
             <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full h-12 px-8 border-white/10 hover:bg-white/5 font-semibold text-base">
-              For Creators
+              <Play className="mr-2 w-4 h-4" />
+              Watch Demo
             </Button>
-          </Link>
+          </a>
         </motion.div>
 
         {/* Stats/Features Preview */}
